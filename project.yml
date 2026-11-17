@@ -18,6 +18,13 @@ targets:
       - path: Shared
     info:
       path: NoelIsland/Info.plist
+      properties:
+        CFBundleDisplayName: "Noel Island"
+        NSSupportsLiveActivities: true
+        UILaunchScreen: {}
+        LSRequiresIPhoneOS: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.noelisland.christmas
@@ -34,6 +41,9 @@ targets:
       - path: Shared
     info:
       path: NoelIslandWidget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.noelisland.christmas.widget
