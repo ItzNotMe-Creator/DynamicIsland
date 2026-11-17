@@ -43,8 +43,32 @@ jobs:
           cd export
           zip -qry NoelIsland-unsigned.ipa Payload
 
+      - name: Validate Live Activity configuration
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/NoelIsland.app"
+          EXT="$APP/PlugIns/NoelIslandWidget.appex"
+          test -d "$APP"
+          test -d "$EXT"
+          test -f "$APP/Info.plist"
+          test -f "$EXT/Info.plist"
+          test -f "$APP/NoelIsland"
+          /usr/libexec/PlistBuddy -c 'Print :NSSupportsLiveActivities' "$APP/Info.plist" | grep -qi true
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "app.noelisland.christmas"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$EXT/Info.plist")" = "app.noelisland.christmas.widget"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$EXT/Info.plist")" = "com.apple.widgetkit-extension"
+
+      - name: Validate unsigned IPA archive
+        run: |
+          set -euo pipefail
+          test -s export/NoelIsland-unsigned.ipa
+          unzip -t export/NoelIsland-unsigned.ipa
+          unzip -Z1 export/NoelIsland-unsigned.ipa | grep -Fx 'Payload/NoelIsland.app/Info.plist'
+          unzip -Z1 export/NoelIsland-unsigned.ipa | grep -Fx 'Payload/NoelIsland.app/PlugIns/NoelIslandWidget.appex/Info.plist'
+
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: NoelIsland-iPhone-IPA
           path: export/NoelIsland-unsigned.ipa
+          if-no-files-found: error
