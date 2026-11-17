@@ -45,28 +45,61 @@ struct ChristmasLiveActivity: Widget {
                     NoelExpandedScene(context: context)
                 }
             } compactLeading: {
-                HStack(spacing: 3) {
-                    Text(context.state.scene == .snowstorm ? "❄️" : context.state.theme.emoji)
-                        .font(.system(size: 17))
-                    if context.state.mood == .blizzard {
-                        Image(systemName: "snowflake")
-                            .font(.system(size: 8, weight: .black))
-                            .foregroundStyle(.cyan)
-                    }
-                }
+                NoelCompactLeading(context: context)
             } compactTrailing: {
-                HStack(spacing: 3) {
-                    Text("\(ChristmasTime.days(until: context.attributes.christmasDate))d")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
-                        .monospacedDigit()
-                    Text("❄")
-                        .font(.system(size: 9))
-                        .foregroundStyle(NoelIslandColors.mint)
-                }
+                NoelCompactMotion(context: context)
             } minimal: {
-                Text(context.state.scene.icon)
+                Image(systemName: "cloud.snow.fill")
+                    .foregroundStyle(.cyan)
             }
             .keylineTint(NoelIslandColors.accent(for: context.state.scene))
+        }
+    }
+}
+
+// The small Island always displays snow, while Apple's date-driven views
+// advance automatically without forcing frequent background app refreshes.
+private struct NoelCompactLeading: View {
+    let context: ActivityViewContext<ChristmasAttributes>
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Text(context.state.theme.emoji)
+                .font(.system(size: 14))
+            Image(systemName: "cloud.snow.fill")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.cyan)
+            Text("\(ChristmasTime.days(until: context.attributes.christmasDate))d")
+                .font(.system(size: 9, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+        }
+    }
+}
+
+private struct NoelCompactMotion: View {
+    let context: ActivityViewContext<ChristmasAttributes>
+
+    private var eventInterval: ClosedRange<Date> {
+        context.state.startedAt...context.state.eventUntil
+    }
+
+    var body: some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: "snowflake")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.cyan)
+                Text(timerInterval: eventInterval, countsDown: true, showsHours: false)
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .monospacedDigit()
+                    .frame(width: 36, alignment: .trailing)
+                    .contentTransition(.numericText(countsDown: true))
+            }
+            ProgressView(timerInterval: eventInterval, countsDown: true)
+                .progressViewStyle(.linear)
+                .tint(.cyan)
+                .frame(width: 45, height: 2)
         }
     }
 }
