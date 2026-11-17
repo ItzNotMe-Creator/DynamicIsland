@@ -58,8 +58,9 @@ struct ChristmasLiveActivity: Widget {
     }
 }
 
-// The small Island always displays snow, while Apple's date-driven views
-// advance automatically without forcing frequent background app refreshes.
+// Compact Dynamic Island: no artificial blue progress stripe or timer that stops
+// at zero. The elapsed scene time is rendered by the system's timer Text style.
+// Full particle animation is not available in ActivityKit.
 private struct NoelCompactLeading: View {
     let context: ActivityViewContext<ChristmasAttributes>
 
@@ -81,27 +82,18 @@ private struct NoelCompactLeading: View {
 private struct NoelCompactMotion: View {
     let context: ActivityViewContext<ChristmasAttributes>
 
-    private var eventInterval: ClosedRange<Date> {
-        context.state.startedAt...context.state.eventUntil
-    }
-
     var body: some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 3) {
-                Image(systemName: "snowflake")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.cyan)
-                Text(timerInterval: eventInterval, countsDown: true, showsHours: false)
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .monospacedDigit()
-                    .frame(width: 36, alignment: .trailing)
-                    .contentTransition(.numericText(countsDown: true))
-            }
-            ProgressView(timerInterval: eventInterval, countsDown: true)
-                .progressViewStyle(.linear)
-                .tint(.cyan)
-                .frame(width: 45, height: 2)
+        HStack(spacing: 4) {
+            Image(systemName: "snowflake")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(NoelIslandColors.mint)
+            Text(context.state.startedAt, style: .timer)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: 43, alignment: .trailing)
         }
+        .foregroundStyle(.white)
     }
 }
 
@@ -154,18 +146,45 @@ private struct NoelExpandedScene: View {
                                startPoint: .top, endPoint: .bottom)
                     .clipShape(RoundedRectangle(cornerRadius: 17))
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(context.state.scene.icon)
-                        .font(.system(size: 24))
-                    Text(context.state.scene.title.uppercased())
-                        .font(.system(size: 12, weight: .black, design: .rounded))
-                        .tracking(0.8)
-                    Text(context.state.scene.caption)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 5))
+                            .foregroundStyle(NoelIslandColors.mint)
+                        Text("SCENE LIVE")
+                            .font(.system(size: 8, weight: .heavy, design: .rounded))
+                            .tracking(1)
+                        Spacer(minLength: 5)
+                        Image(systemName: "snowflake")
+                            .font(.system(size: 9))
+                        Text(context.state.startedAt, style: .timer)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(NoelIslandColors.cream)
+                    Spacer(minLength: 4)
+                    HStack(alignment: .bottom, spacing: 10) {
+                        Text(context.state.scene.icon)
+                            .font(.system(size: 29))
+                            .id(context.state.scene.icon)
+                            .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(context.state.scene.title.uppercased())
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                                .tracking(0.8)
+                            Text(context.state.scene.caption)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                        .id(context.state.scene.rawValue)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        Spacer(minLength: 0)
+                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(12)
+                .animation(.easeInOut(duration: 0.55), value: context.state.scene)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
             .frame(height: 122)
 
@@ -174,7 +193,7 @@ private struct NoelExpandedScene: View {
                     .foregroundStyle(NoelIslandColors.mint)
                 Text(context.state.mood.title.uppercased())
                 Spacer()
-                Text(context.state.theme.title)
+                Text("✦ TAP FOR STUDIO")
                     .lineLimit(1)
             }
             .font(.system(size: 10, weight: .heavy, design: .rounded))

@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var busy = false
     @State private var status = "Your North Pole is ready."
     @State private var showNightstand = false
+    @State private var previewStart = Date()
 
     private var theme: ChristmasTheme { ChristmasTheme(rawValue: themeRaw) ?? .santa }
     private var mood: ChristmasMood { ChristmasMood(rawValue: moodRaw) ?? .magic }
@@ -207,25 +208,31 @@ struct ContentView: View {
 
             HStack(spacing: 0) {
                 Spacer()
-                HStack(spacing: 18) {
-                    Text(scene == .snowstorm ? "❄️" : theme.emoji)
-                        .font(.system(size: 19))
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text("\(ChristmasTime.days(until: ChristmasTime.nextChristmas())) DAYS")
-                            .font(.system(size: 12, weight: .heavy, design: .rounded))
-                        Text(scene.title.uppercased())
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(NoelPalette.mint)
-                    }
+                HStack(spacing: 10) {
+                    Text(theme.emoji)
+                        .font(.system(size: 16))
+                    Image(systemName: "cloud.snow.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(NoelPalette.mint)
+                    Text("\(ChristmasTime.days(until: ChristmasTime.nextChristmas()))d")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                    Spacer(minLength: 18)
+                    Image(systemName: "snowflake")
+                        .font(.system(size: 10))
+                        .foregroundStyle(NoelPalette.mint)
+                    Text(previewStart, style: .timer)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 17)
-                .padding(.vertical, 11)
+                .frame(maxWidth: 260)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 13)
                 .background(.black, in: Capsule())
                 .overlay(Capsule().stroke(.white.opacity(0.17)))
                 Spacer()
             }
-            Text("The small Island now shows snow, a ticking 30-minute scene timer, and a progress line. Long-press for the winter scene. Falling particles animate in this app, not continuously in the background Island.")
+            Text("Clean snow symbols + a live elapsed timer. No blue bar. Long-press for the winter scene. iOS only permits brief scene-change animations in Live Activities.")
                 .font(.system(size: 12))
                 .foregroundStyle(NoelPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -454,6 +461,7 @@ struct ContentView: View {
         for activity in Activity<ChristmasAttributes>.activities {
             await activity.update(ActivityContent(state: state, staleDate: nil))
         }
+        previewStart = Date()
         status = "\(scene.title) sent to your Island ✨"
     }
 
@@ -477,6 +485,7 @@ struct ContentView: View {
                 content: ActivityContent(state: state, staleDate: nil), pushType: nil)
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             running = true
+            previewStart = Date()
             status = "It's LIVE! Long-press the Island for the magic."
         } catch {
             running = false
@@ -500,11 +509,20 @@ struct ContentView: View {
 private struct HolidayHeroView: View {
     let theme: ChristmasTheme
     let scene: NorthPoleScene
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isFloating = false
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
                 NoelSceneArt(scene: scene, mood: .magic)
+                // Motion belongs in the foreground app, where SwiftUI can animate
+                // continuously. Live Activity views cannot run this animation loop.
+                Text(scene == .sleighFlyby ? "🛷" : scene == .giftShower ? "🎁" : scene == .snowstorm ? "❄️" : "✨")
+                    .font(.system(size: 27))
+                    .offset(x: isFloating ? 140 : -150, y: isFloating ? -18 : 24)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 6).repeatForever(autoreverses: true), value: isFloating)
+                    .allowsHitTesting(false)
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.15), .black.opacity(0.6)],
                     startPoint: .top,
@@ -535,6 +553,7 @@ private struct HolidayHeroView: View {
             }
             .frame(height: 240)
             .clipped()
+            .onAppear { isFloating = !reduceMotion }
 
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let christmas = ChristmasTime.nextChristmas(from: timeline.date)
