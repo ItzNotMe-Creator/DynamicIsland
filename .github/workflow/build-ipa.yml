@@ -1,0 +1,50 @@
+
+name: Build Noel Island for iPhone
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ios-build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Build iPhone app
+        run: |
+          xcodebuild \
+            -project NoelIsland.xcodeproj \
+            -scheme NoelIsland \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            build
+
+      - name: Create IPA
+        run: |
+          mkdir -p export/Payload
+          cp -R build/Build/Products/Release-iphoneos/NoelIsland.app export/Payload/
+          cd export
+          zip -qry NoelIsland-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoelIsland-iPhone-IPA
+          path: export/NoelIsland-unsigned.ipa
