@@ -117,7 +117,7 @@ struct ContentView: View {
                 .overlay(Capsule().stroke(.white.opacity(0.17)))
                 Spacer()
             }
-            Text("Long-press the real Island to enter the North Pole. Change scenes below to send a new look to it.")
+            Text("The small Island now shows snow, a ticking 30-minute scene timer, and a progress line. Long-press for the winter scene. Falling particles animate in this app, not continuously in the background Island.")
                 .font(.system(size: 12))
                 .foregroundStyle(NoelPalette.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -342,7 +342,7 @@ struct ContentView: View {
         }
         let state = ChristmasAttributes.ContentState(
             theme: theme, mood: mood, scene: scene,
-            startedAt: Date(), eventUntil: Date().addingTimeInterval(180))
+            startedAt: Date(), eventUntil: Date().addingTimeInterval(1800))
         for activity in Activity<ChristmasAttributes>.activities {
             await activity.update(ActivityContent(state: state, staleDate: nil))
         }
@@ -363,7 +363,7 @@ struct ContentView: View {
         let attributes = ChristmasAttributes(christmasDate: ChristmasTime.nextChristmas())
         let state = ChristmasAttributes.ContentState(
             theme: theme, mood: mood, scene: scene,
-            startedAt: Date(), eventUntil: Date().addingTimeInterval(180))
+            startedAt: Date(), eventUntil: Date().addingTimeInterval(1800))
         do {
             _ = try Activity.request(attributes: attributes,
                 content: ActivityContent(state: state, staleDate: nil), pushType: nil)
