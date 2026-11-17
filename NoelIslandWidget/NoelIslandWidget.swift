@@ -12,101 +12,216 @@ struct NoelIslandWidgetBundle: WidgetBundle {
 struct ChristmasLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ChristmasAttributes.self) { context in
-            lockScreenCard(context: context)
-                .activityBackgroundTint(Color(red: 0.10, green: 0.19, blue: 0.16))
+            NoelLockScreenCard(context: context)
+                .activityBackgroundTint(Color(red: 0.04, green: 0.10, blue: 0.18))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Text(context.state.theme.emoji)
-                        .font(.system(size: 29))
-                        .padding(.leading, 3)
+                    HStack(spacing: 5) {
+                        Text(context.state.theme.emoji)
+                            .font(.system(size: 22))
+                        Text("NOEL")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .tracking(1)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text("\(ChristmasTime.days(until: context.attributes.christmasDate))")
-                            .font(.system(size: 26, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
+                            .font(.system(size: 23, weight: .black, design: .rounded))
+                            .monospacedDigit()
                         Text("DAYS")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.green)
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .foregroundStyle(NoelIslandColors.mint)
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(spacing: 2) {
-                        Text("🎄 NORTH POLE LIVE")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.green)
-                        Text(context.state.theme.title)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                    }
+                    Text("✦ NORTH POLE LIVE ✦")
+                        .font(.system(size: 9, weight: .heavy, design: .rounded))
+                        .foregroundStyle(NoelIslandColors.mint)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 7) {
-                        HStack {
-                            Text("❄️")
-                            Spacer()
-                            Text("🎁")
-                            Spacer()
-                            Text("🦌")
-                            Spacer()
-                            Text("🎄")
-                        }
-                        .font(.system(size: 18))
-                        Capsule()
-                            .fill(LinearGradient(colors: [.red, .green], startPoint: .leading, endPoint: .trailing))
-                            .frame(height: 4)
-                        Text("The magic is getting closer ✨")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 4)
+                    NoelExpandedScene(context: context)
                 }
             } compactLeading: {
-                Text(context.state.theme.emoji)
-                    .font(.system(size: 17))
+                HStack(spacing: 3) {
+                    Text(context.state.scene == .snowstorm ? "❄️" : context.state.theme.emoji)
+                        .font(.system(size: 17))
+                    if context.state.mood == .blizzard {
+                        Image(systemName: "snowflake")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(.cyan)
+                    }
+                }
             } compactTrailing: {
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     Text("\(ChristmasTime.days(until: context.attributes.christmasDate))d")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                    Image(systemName: "snowflake")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.cyan)
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
+                    Text("❄")
+                        .font(.system(size: 9))
+                        .foregroundStyle(NoelIslandColors.mint)
                 }
             } minimal: {
-                Text(context.state.theme.emoji)
+                Text(context.state.scene.icon)
             }
-            .keylineTint(.green)
+            .keylineTint(NoelIslandColors.accent(for: context.state.scene))
+        }
+    }
+}
+
+private enum NoelIslandColors {
+    static let mint = Color(red: 0.54, green: 0.94, blue: 0.77)
+    static let cream = Color(red: 0.98, green: 0.95, blue: 0.87)
+
+    static func accent(for scene: NorthPoleScene) -> Color {
+        switch scene {
+        case .winterNight: return .cyan
+        case .sleighFlyby: return .red
+        case .giftShower: return .yellow
+        case .snowstorm: return .white
+        case .northernLights: return mint
+        case .starWish: return Color(red: 0.85, green: 0.62, blue: 1)
         }
     }
 
-    private func lockScreenCard(context: ActivityViewContext<ChristmasAttributes>) -> some View {
-        HStack(spacing: 14) {
-            Text(context.state.theme.emoji).font(.system(size: 40))
-            VStack(alignment: .leading, spacing: 4) {
-                Text("🎄 NORTH POLE LIVE")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(1.5)
-                    .foregroundStyle(.green)
-                Text(context.state.theme.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("Christmas is on its way ✨")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.65))
+    static func sky(for scene: NorthPoleScene) -> [Color] {
+        switch scene {
+        case .winterNight:
+            return [Color(red: 0.05, green: 0.14, blue: 0.27), Color(red: 0.10, green: 0.26, blue: 0.35)]
+        case .sleighFlyby:
+            return [Color(red: 0.29, green: 0.07, blue: 0.19), Color(red: 0.12, green: 0.23, blue: 0.35)]
+        case .giftShower:
+            return [Color(red: 0.29, green: 0.20, blue: 0.07), Color(red: 0.08, green: 0.28, blue: 0.25)]
+        case .snowstorm:
+            return [Color(red: 0.12, green: 0.24, blue: 0.34), Color(red: 0.27, green: 0.46, blue: 0.51)]
+        case .northernLights:
+            return [Color(red: 0.05, green: 0.26, blue: 0.24), Color(red: 0.21, green: 0.12, blue: 0.37)]
+        case .starWish:
+            return [Color(red: 0.20, green: 0.10, blue: 0.36), Color(red: 0.10, green: 0.24, blue: 0.34)]
+        }
+    }
+}
+
+// WidgetKit permits brief transitions when an activity is updated, but does
+// not run an unrestricted snow animation continuously in Dynamic Island.
+private struct NoelExpandedScene: View {
+    let context: ActivityViewContext<ChristmasAttributes>
+
+    var body: some View {
+        VStack(spacing: 7) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 17)
+                    .fill(
+                        LinearGradient(
+                            colors: NoelIslandColors.sky(for: context.state.scene),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                NoelSnowArtwork(mood: context.state.mood)
+                    .padding(4)
+                HStack {
+                    Spacer()
+                    Circle()
+                        .fill(.white.opacity(0.88))
+                        .frame(width: 29, height: 29)
+                        .shadow(color: .white.opacity(0.5), radius: 8)
+                        .padding(.trailing, 24)
+                        .padding(.top, 11)
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(context.state.scene.icon)
+                        .font(.system(size: 24))
+                    Text(context.state.scene.title.uppercased())
+                        .font(.system(size: 12, weight: .black, design: .rounded))
+                        .tracking(0.8)
+                    Text(context.state.scene.caption)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .padding(12)
             }
-            Spacer(minLength: 8)
-            VStack(spacing: 1) {
+            .frame(height: 114)
+
+            HStack(spacing: 7) {
+                Image(systemName: context.state.mood.icon)
+                    .foregroundStyle(NoelIslandColors.mint)
+                Text(context.state.mood.title.uppercased())
+                Spacer()
+                Text(context.state.theme.title)
+                    .lineLimit(1)
+            }
+            .font(.system(size: 10, weight: .heavy, design: .rounded))
+            .foregroundStyle(NoelIslandColors.cream)
+            .padding(.horizontal, 5)
+        }
+        .padding(.horizontal, 2)
+    }
+}
+
+private struct NoelSnowArtwork: View {
+    let mood: ChristmasMood
+
+    var body: some View {
+        Canvas { painter, canvasSize in
+            let count = mood == .cozy ? 12 : (mood == .magic ? 25 : 44)
+            for index in 0..<count {
+                let x = CGFloat((index * 43 + 19) % 97) / 97 * canvasSize.width
+                let y = CGFloat((index * 59 + 11) % 89) / 89 * canvasSize.height
+                let radius = CGFloat(index % 3 + 1)
+                let spot = CGRect(x: x, y: y, width: radius * 1.8, height: radius * 1.8)
+                painter.fill(Path(ellipseIn: spot), with: .color(.white.opacity(0.72)))
+            }
+        }
+    }
+}
+
+private struct NoelLockScreenCard: View {
+    let context: ActivityViewContext<ChristmasAttributes>
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 17)
+                    .fill(
+                        LinearGradient(
+                            colors: NoelIslandColors.sky(for: context.state.scene),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                Text(context.state.scene.icon)
+                    .font(.system(size: 32))
+            }
+            .frame(width: 66, height: 66)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("✦ NOEL ISLAND / LIVE")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(NoelIslandColors.mint)
+                Text(context.state.scene.title)
+                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(context.state.scene.caption)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            VStack(spacing: 0) {
                 Text("\(ChristmasTime.days(until: context.attributes.christmasDate))")
-                    .font(.system(size: 33, weight: .black, design: .rounded))
+                    .font(.system(size: 31, weight: .black, design: .rounded))
+                    .monospacedDigit()
                 Text("DAYS")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .tracking(1)
+                    .font(.system(size: 9, weight: .black, design: .rounded))
             }
             .foregroundStyle(.white)
         }
-        .padding(14)
+        .padding(13)
     }
 }
