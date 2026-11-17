@@ -53,6 +53,7 @@ struct ChristmasLiveActivity: Widget {
                     .foregroundStyle(.cyan)
             }
             .keylineTint(NoelIslandColors.accent(for: context.state.scene))
+            .widgetURL(URL(string: "noelisland://studio"))
         }
     }
 }
@@ -145,26 +146,13 @@ private struct NoelExpandedScene: View {
     var body: some View {
         VStack(spacing: 7) {
             ZStack {
-                RoundedRectangle(cornerRadius: 17)
-                    .fill(
-                        LinearGradient(
-                            colors: NoelIslandColors.sky(for: context.state.scene),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                NoelSceneArt(scene: context.state.scene, mood: context.state.mood)
+                    .clipShape(RoundedRectangle(cornerRadius: 17))
                 NoelSnowArtwork(mood: context.state.mood)
                     .padding(4)
-                HStack {
-                    Spacer()
-                    Circle()
-                        .fill(.white.opacity(0.88))
-                        .frame(width: 29, height: 29)
-                        .shadow(color: .white.opacity(0.5), radius: 8)
-                        .padding(.trailing, 24)
-                        .padding(.top, 11)
-                }
-                .frame(maxHeight: .infinity, alignment: .top)
+                LinearGradient(colors: [.clear, .black.opacity(0.05), .black.opacity(0.45)],
+                               startPoint: .top, endPoint: .bottom)
+                    .clipShape(RoundedRectangle(cornerRadius: 17))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(context.state.scene.icon)
@@ -179,7 +167,7 @@ private struct NoelExpandedScene: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(12)
             }
-            .frame(height: 114)
+            .frame(height: 122)
 
             HStack(spacing: 7) {
                 Image(systemName: context.state.mood.icon)
@@ -220,14 +208,8 @@ private struct NoelLockScreenCard: View {
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 17)
-                    .fill(
-                        LinearGradient(
-                            colors: NoelIslandColors.sky(for: context.state.scene),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                NoelSceneArt(scene: context.state.scene, mood: context.state.mood)
+                    .clipShape(RoundedRectangle(cornerRadius: 17))
                 Text(context.state.scene.icon)
                     .font(.system(size: 32))
             }

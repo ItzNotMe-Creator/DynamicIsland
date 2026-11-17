@@ -21,6 +21,10 @@ targets:
       properties:
         CFBundleDisplayName: "Noel Island"
         NSSupportsLiveActivities: true
+        CFBundleURLTypes:
+          - CFBundleURLName: app.noelisland.christmas
+            CFBundleURLSchemes:
+              - noelisland
         UILaunchScreen: {}
         LSRequiresIPhoneOS: true
         UISupportedInterfaceOrientations:

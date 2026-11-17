@@ -11,10 +11,30 @@ private enum NoelPalette {
     static let muted = Color(red: 0.64, green: 0.72, blue: 0.76)
 }
 
+private enum NoelPage: String, CaseIterable, Identifiable {
+    case home, island, studio
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .home: return "Home"
+        case .island: return "Island"
+        case .studio: return "Studio"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .island: return "iphone.gen3"
+        case .studio: return "sparkles"
+        }
+    }
+}
+
 struct ContentView: View {
     @AppStorage("noel.theme") private var themeRaw = ChristmasTheme.santa.rawValue
     @AppStorage("noel.mood") private var moodRaw = ChristmasMood.magic.rawValue
-    @State private var scene: NorthPoleScene = .winterNight
+    @AppStorage("noel.scene") private var sceneRaw = NorthPoleScene.winterNight.rawValue
+    @State private var page: NoelPage = .home
     @State private var running = false
     @State private var busy = false
     @State private var status = "Your North Pole is ready."
@@ -22,6 +42,7 @@ struct ContentView: View {
 
     private var theme: ChristmasTheme { ChristmasTheme(rawValue: themeRaw) ?? .santa }
     private var mood: ChristmasMood { ChristmasMood(rawValue: moodRaw) ?? .magic }
+    private var scene: NorthPoleScene { NorthPoleScene(rawValue: sceneRaw) ?? .winterNight }
 
     var body: some View {
         ZStack {
@@ -32,41 +53,128 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 23) {
-                    header
-                    HolidayHeroView(theme: theme, scene: scene)
-                    islandPreview
-                    themePicker
-                    moodPicker
-                    scenePicker
-                    startControls
-                    nightstandControls
-                    footer
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        header
+
+                        if page == .home {
+                            HolidayHeroView(theme: theme, scene: scene)
+                            quickActionDeck
+                            nightstandControls
+                            footer
+                        } else if page == .island {
+                            islandPreview
+                            startControls
+                            quickActionDeck
+                            scenePicker
+                            footer
+                        } else {
+                            themePicker
+                            moodPicker
+                            scenePicker
+                            footer
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 52)
+                navigationDock
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 7)
             }
         }
         .preferredColorScheme(.dark)
         .task { await refreshState() }
+        .onOpenURL { url in
+            if url.scheme == "noelisland" {
+                withAnimation(.easeInOut(duration: 0.2)) { page = .studio }
+            }
+        }
         .fullScreenCover(isPresented: $showNightstand) {
             NoelNightstandView(theme: theme, mood: mood, scene: scene)
         }
     }
 
+    private var navigationDock: some View {
+        HStack(spacing: 5) {
+            ForEach(NoelPage.allCases) { item in
+                Button {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    withAnimation(.easeInOut(duration: 0.24)) { page = item }
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(item.title)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(page == item ? NoelPalette.background : NoelPalette.cream)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(page == item ? NoelPalette.mint : .clear,
+                                in: RoundedRectangle(cornerRadius: 17))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(6)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.11)))
+    }
+
+    private var quickActionDeck: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("MAGIC REMOTE", caption: "One tap = a new Island scene")
+            HStack(spacing: 9) {
+                quickButton("SNOW BURST", symbol: "snowflake", scene: .snowstorm, tint: NoelPalette.mint)
+                quickButton("SANTA RUN", symbol: "gift.fill", scene: .sleighFlyby, tint: NoelPalette.gold)
+                quickButton("AURORA", symbol: "sparkles", scene: .northernLights, tint: Color(red: 0.75, green: 0.64, blue: 1))
+            }
+        }
+    }
+
+    private func quickButton(_ label: String, symbol: String, scene next: NorthPoleScene, tint: Color) -> some View {
+        Button {
+            activateScene(next)
+        } label: {
+            VStack(spacing: 11) {
+                Image(systemName: symbol)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(tint)
+                Text(label)
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .tracking(0.4)
+            }
+            .foregroundStyle(NoelPalette.cream)
+            .frame(maxWidth: .infinity)
+            .frame(height: 93)
+            .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 19))
+            .overlay(RoundedRectangle(cornerRadius: 19).stroke(tint.opacity(0.24)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func activateScene(_ next: NorthPoleScene) {
+        sceneRaw = next.rawValue
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        Task { await syncActivity() }
+    }
+
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("N O E L  /  I S L A N D")
+                Text("N O E L  /  STUDIO")
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .tracking(2.2)
                     .foregroundStyle(NoelPalette.mint)
-                Text("The North Pole,")
+                Text(page == .home ? "Christmas, reimagined." : page == .island ? "Your little universe." : "Make some magic.")
                     .font(.system(size: 29, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                Text("in your pocket.")
+                Text(page == .home ? "Right on your Island." : page == .island ? "Alive on your iPhone." : "Your scene. Your rules.")
                     .font(.system(size: 29, weight: .bold, design: .rounded))
                     .foregroundStyle(NoelPalette.cream)
             }
@@ -134,6 +242,7 @@ struct ContentView: View {
                     ForEach(ChristmasTheme.allCases) { item in
                         Button {
                             themeRaw = item.rawValue
+                            UISelectionFeedbackGenerator().selectionChanged()
                             Task { await syncActivity() }
                         } label: {
                             VStack(spacing: 7) {
@@ -164,6 +273,7 @@ struct ContentView: View {
                 ForEach(ChristmasMood.allCases) { item in
                     Button {
                         moodRaw = item.rawValue
+                        UISelectionFeedbackGenerator().selectionChanged()
                         Task { await syncActivity() }
                     } label: {
                         VStack(spacing: 7) {
@@ -190,8 +300,7 @@ struct ContentView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(NorthPoleScene.allCases) { item in
                     Button {
-                        scene = item
-                        Task { await syncActivity() }
+                        activateScene(item)
                     } label: {
                         HStack(spacing: 10) {
                             Text(item.icon)
@@ -220,8 +329,7 @@ struct ContentView: View {
 
             Button {
                 if let randomScene = NorthPoleScene.allCases.filter({ $0 != scene }).randomElement() {
-                    scene = randomScene
-                    Task { await syncActivity() }
+                    activateScene(randomScene)
                 }
             } label: {
                 HStack {
@@ -305,7 +413,7 @@ struct ContentView: View {
 
     private var footer: some View {
         VStack(spacing: 7) {
-            Text("❄️  NOEL ISLAND / VERSION 2.0  ❄️")
+            Text("✦  NOEL ISLAND / WINTER EDITION 3.0  ✦")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(1.5)
             Text("Falling snow animates inside this app. The Dynamic Island uses Apple's system-supported Live Activity scenes and short update transitions. Live Activities may end after about eight hours.")
@@ -331,7 +439,7 @@ struct ContentView: View {
     @MainActor
     private func refreshState() async {
         running = !Activity<ChristmasAttributes>.activities.isEmpty
-        status = running ? "Magic is live in your Dynamic Island." : "Ready for the North Pole to launch."
+        status = running ? "Live on your Dynamic Island. Pick a scene to change it." : "Ready to launch your North Pole."
     }
 
     @MainActor
@@ -367,6 +475,7 @@ struct ContentView: View {
         do {
             _ = try Activity.request(attributes: attributes,
                 content: ActivityContent(state: state, staleDate: nil), pushType: nil)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             running = true
             status = "It's LIVE! Long-press the Island for the magic."
         } catch {
@@ -395,17 +504,12 @@ private struct HolidayHeroView: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                LinearGradient(colors: sceneColors, startPoint: .topLeading, endPoint: .bottomTrailing)
-                Circle()
-                    .fill(.white.opacity(0.8))
-                    .frame(width: 70, height: 70)
-                    .blur(radius: 1)
-                    .offset(x: 100, y: -48)
-                Circle()
-                    .fill(.white.opacity(0.22))
-                    .frame(width: 115, height: 115)
-                    .blur(radius: 22)
-                    .offset(x: 100, y: -48)
+                NoelSceneArt(scene: scene, mood: .magic)
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.15), .black.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
 
                 VStack(alignment: .leading, spacing: 11) {
                     HStack {
