@@ -259,11 +259,19 @@ private struct SnowfallView: View {
         var speed: CGFloat
     }
 
-    private let flakes: [Flake] = (0..<40).map { i in
-        Flake(x: CGFloat((i * 173 + 73) % 997) / 997,
-              y: CGFloat((i * 271 + 127) % 991) / 991,
-              radius: CGFloat((i % 3) + 1),
-              speed: CGFloat((i % 4) + 1) * 0.012)
+    private let flakes: [Flake] = SnowfallView.makeFlakes()
+
+    private static func makeFlakes() -> [Flake] {
+        var result: [Flake] = []
+        result.reserveCapacity(40)
+        for i in 0..<40 {
+            let x: CGFloat = CGFloat((i * 173 + 73) % 997) / CGFloat(997)
+            let y: CGFloat = CGFloat((i * 271 + 127) % 991) / CGFloat(991)
+            let radius: CGFloat = CGFloat((i % 3) + 1)
+            let speed: CGFloat = CGFloat((i % 4) + 1) * CGFloat(0.012)
+            result.append(Flake(x: x, y: y, radius: radius, speed: speed))
+        }
+        return result
     }
 
     var body: some View {
