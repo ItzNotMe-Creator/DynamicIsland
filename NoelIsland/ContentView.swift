@@ -1,5 +1,6 @@
 import SwiftUI
 import ActivityKit
+import UIKit
 
 private enum NoelPalette {
     static let background = Color(red: 0.026, green: 0.049, blue: 0.086)
