@@ -1,184 +1,259 @@
 import SwiftUI
 import ActivityKit
 
-struct ContentView: View {
-    @State private var theme: ChristmasTheme = .santa
-    @State private var running = false
-    @State private var status = "Ready for some Christmas magic."
-    @State private var busy = false
+private enum NoelPalette {
+    static let background = Color(red: 0.026, green: 0.049, blue: 0.086)
+    static let night = Color(red: 0.055, green: 0.10, blue: 0.18)
+    static let cream = Color(red: 0.98, green: 0.94, blue: 0.83)
+    static let mint = Color(red: 0.56, green: 0.94, blue: 0.79)
+    static let gold = Color(red: 1.0, green: 0.77, blue: 0.40)
+    static let muted = Color(red: 0.64, green: 0.72, blue: 0.76)
+}
 
-    private let cream = Color(red: 1.0, green: 0.95, blue: 0.86)
-    private let evergreen = Color(red: 0.08, green: 0.30, blue: 0.25)
-    private let red = Color(red: 0.77, green: 0.16, blue: 0.24)
+struct ContentView: View {
+    @AppStorage("noel.theme") private var themeRaw = ChristmasTheme.santa.rawValue
+    @AppStorage("noel.mood") private var moodRaw = ChristmasMood.magic.rawValue
+    @State private var scene: NorthPoleScene = .winterNight
+    @State private var running = false
+    @State private var busy = false
+    @State private var status = "Your North Pole is ready."
+    @State private var surpriseCount = 0
+
+    private var theme: ChristmasTheme { ChristmasTheme(rawValue: themeRaw) ?? .santa }
+    private var mood: ChristmasMood { ChristmasMood(rawValue: moodRaw) ?? .magic }
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.015, green: 0.08, blue: 0.12),
-                                    Color(red: 0.04, green: 0.16, blue: 0.17),
-                                    Color(red: 0.07, green: 0.07, blue: 0.10)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: [NoelPalette.background, NoelPalette.night, .black],
+                           startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
-            SnowfallView().ignoresSafeArea().allowsHitTesting(false).opacity(0.55)
+            AnimatedSnowView(mood: mood)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 22) {
-                    titleSection
-                    christmasCard
+                VStack(alignment: .leading, spacing: 23) {
+                    header
+                    HolidayHeroView(theme: theme, scene: scene)
                     islandPreview
-                    themeSection
-                    actionSection
-                    footnote
+                    themePicker
+                    moodPicker
+                    scenePicker
+                    startControls
+                    footer
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 24)
-                .padding(.bottom, 42)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 52)
             }
         }
+        .preferredColorScheme(.dark)
         .task { await refreshState() }
     }
 
-    private var titleSection: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                Text("N O E L   I S L A N D")
-                    .tracking(2)
+    private var header: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("N O E L  /  I S L A N D")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .tracking(2.2)
+                    .foregroundStyle(NoelPalette.mint)
+                Text("The North Pole,")
+                    .font(.system(size: 29, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("in your pocket.")
+                    .font(.system(size: 29, weight: .bold, design: .rounded))
+                    .foregroundStyle(NoelPalette.cream)
             }
-            .font(.system(size: 12, weight: .bold, design: .rounded))
-            .foregroundStyle(Color(red: 0.97, green: 0.80, blue: 0.45))
-            Text("Christmas, but cooler.")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.white)
-            Text("A little piece of the North Pole in your Dynamic Island")
-                .font(.footnote)
-                .foregroundStyle(.white.opacity(0.66))
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private var christmasCard: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { timeline in
-            let target = ChristmasTime.nextChristmas(from: timeline.date)
-            let days = ChristmasTime.days(until: target, from: timeline.date)
-            VStack(spacing: 12) {
-                HStack {
-                    Text("THE CHRISTMAS COUNTDOWN")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .tracking(1.8)
-                    Spacer()
-                    Image(systemName: "snowflake")
-                }
-                .foregroundStyle(cream.opacity(0.75))
-                Text("🎄")
-                    .font(.system(size: 68))
-                    .shadow(color: .white.opacity(0.35), radius: 20)
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(days)")
-                        .font(.system(size: 74, weight: .black, design: .rounded))
-                    Text(days == 1 ? "DAY" : "DAYS")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(.white)
-                Text("UNTIL THE MAGIC BEGINS")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .tracking(2)
-                    .foregroundStyle(cream.opacity(0.85))
+            Spacer(minLength: 5)
+            VStack(spacing: 5) {
+                Image(systemName: running ? "sparkles.tv.fill" : "moon.stars.fill")
+                    .font(.system(size: 19))
+                    .foregroundStyle(running ? NoelPalette.mint : NoelPalette.gold)
+                Text(running ? "ISLAND LIVE" : "READY")
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundStyle(NoelPalette.cream)
             }
-            .padding(24)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 28)
-                    .fill(LinearGradient(colors: [red, Color(red: 0.38, green: 0.07, blue: 0.16)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            )
-            .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.19)))
+            .padding(12)
+            .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 16))
         }
     }
 
     private var islandPreview: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("DYNAMIC ISLAND PREVIEW", systemImage: "iphone.gen3")
+                Label("LIVE ISLAND", systemImage: "iphone.gen3")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(1)
+                    .tracking(1.6)
                 Spacer()
-                Text(running ? "LIVE" : "PREVIEW")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(running ? .green : cream)
+                Text(running ? "● ACTIVE" : "○ PREVIEW")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(running ? NoelPalette.mint : NoelPalette.muted)
             }
-            .foregroundStyle(cream.opacity(0.88))
-            HStack {
-                Spacer()
-                HStack(spacing: 22) {
-                    Text(theme.emoji)
-                    Text("\(ChristmasTime.days(until: ChristmasTime.nextChristmas()))d  ❄️")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                }
-                .font(.system(size: 18))
-                .padding(.horizontal, 22)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(.black))
-                .overlay(Capsule().stroke(.white.opacity(0.15)))
-                Spacer()
-            }
-            Text("The real Island appears after you press Start. Long-press it for the expanded Christmas card.")
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.54))
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 22).fill(.white.opacity(0.07)))
-    }
+            .foregroundStyle(NoelPalette.cream)
 
-    private var themeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("CHOOSE YOUR CHRISTMAS MODE")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .tracking(1.2)
-                .foregroundStyle(cream)
-            ForEach(ChristmasTheme.allCases) { item in
-                Button {
-                    theme = item
-                } label: {
-                    HStack(spacing: 14) {
-                        Text(item.emoji).font(.system(size: 29))
-                            .frame(width: 44, height: 44)
-                            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.title).font(.system(size: 16, weight: .semibold))
-                            Text(item.subtitle).font(.system(size: 12)).foregroundStyle(.white.opacity(0.56))
-                        }
-                        Spacer()
-                        Image(systemName: theme == item ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(theme == item ? Color.green : .white.opacity(0.3))
-                            .font(.system(size: 21))
+            HStack(spacing: 0) {
+                Spacer()
+                HStack(spacing: 18) {
+                    Text(scene == .snowstorm ? "❄️" : theme.emoji)
+                        .font(.system(size: 19))
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(ChristmasTime.days(until: ChristmasTime.nextChristmas())) DAYS")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        Text(scene.title.uppercased())
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(NoelPalette.mint)
                     }
-                    .foregroundStyle(.white)
-                    .padding(13)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 17)
-                        .fill(theme == item ? evergreen.opacity(0.83) : .white.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 17).stroke(theme == item ? .green.opacity(0.45) : .white.opacity(0.08)))
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 17)
+                .padding(.vertical, 11)
+                .background(.black, in: Capsule())
+                .overlay(Capsule().stroke(.white.opacity(0.17)))
+                Spacer()
+            }
+            Text("Long-press the real Island to enter the North Pole. Change scenes below to send a new look to it.")
+                .font(.system(size: 12))
+                .foregroundStyle(NoelPalette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(17)
+        .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 23))
+    }
+
+    private var themePicker: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("CHRISTMAS CHARACTERS", caption: "01 / Pick your companion")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(ChristmasTheme.allCases) { item in
+                        Button {
+                            themeRaw = item.rawValue
+                            Task { await syncActivity() }
+                        } label: {
+                            VStack(spacing: 7) {
+                                Text(item.emoji)
+                                    .font(.system(size: 38))
+                                Text(item.title)
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(width: 112, height: 109)
+                            .background(theme == item ? NoelPalette.mint.opacity(0.22) : .white.opacity(0.07),
+                                        in: RoundedRectangle(cornerRadius: 21))
+                            .overlay(RoundedRectangle(cornerRadius: 21)
+                                .stroke(theme == item ? NoelPalette.mint : .white.opacity(0.12), lineWidth: theme == item ? 1.6 : 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
     }
 
-    private var actionSection: some View {
+    private var moodPicker: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("SNOW ENGINE", caption: "02 / Choose the atmosphere")
+            HStack(spacing: 9) {
+                ForEach(ChristmasMood.allCases) { item in
+                    Button {
+                        moodRaw = item.rawValue
+                        Task { await syncActivity() }
+                    } label: {
+                        VStack(spacing: 7) {
+                            Image(systemName: item.icon)
+                                .font(.system(size: 22, weight: .medium))
+                            Text(item.title)
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(mood == item ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 85)
+                        .background(mood == item ? NoelPalette.cream : .white.opacity(0.08),
+                                    in: RoundedRectangle(cornerRadius: 17))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var scenePicker: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionTitle("NORTH POLE EVENTS", caption: "03 / Send magic to the Island")
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                ForEach(NorthPoleScene.allCases) { item in
+                    Button {
+                        scene = item
+                        Task { await syncActivity() }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text(item.icon)
+                                .font(.system(size: 27))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.title)
+                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                Text(item == scene ? "SELECTED" : "TAP TO ACTIVATE")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundStyle(item == scene ? NoelPalette.mint : NoelPalette.muted)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 11)
+                        .frame(height: 68)
+                        .frame(maxWidth: .infinity)
+                        .background(item == scene ? NoelPalette.mint.opacity(0.14) : .white.opacity(0.07),
+                                    in: RoundedRectangle(cornerRadius: 17))
+                        .overlay(RoundedRectangle(cornerRadius: 17)
+                            .stroke(item == scene ? NoelPalette.mint.opacity(0.7) : .white.opacity(0.10)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Button {
+                surpriseCount += 1
+                let events = NorthPoleScene.allCases
+                scene = events[surpriseCount % events.count]
+                Task { await syncActivity() }
+            } label: {
+                HStack {
+                    Image(systemName: "wand.and.stars")
+                    Text("SURPRISE ME")
+                        .tracking(1.4)
+                    Spacer()
+                    Text("✦ RANDOM MAGIC")
+                        .font(.system(size: 9, weight: .heavy))
+                }
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(NoelPalette.cream)
+                .padding(17)
+                .background(LinearGradient(colors: [
+                    Color(red: 0.24, green: 0.18, blue: 0.38),
+                    Color(red: 0.12, green: 0.25, blue: 0.28)
+                ], startPoint: .leading, endPoint: .trailing),
+                    in: RoundedRectangle(cornerRadius: 17))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var startControls: some View {
         VStack(spacing: 12) {
             Button {
                 Task { await startChristmas() }
             } label: {
-                HStack(spacing: 9) {
+                HStack(spacing: 10) {
                     Image(systemName: "sparkles")
-                    Text(running ? "RESTART CHRISTMAS ISLAND" : "START CHRISTMAS ISLAND")
+                    Text(running ? "RESTART CHRISTMAS ISLAND" : "LAUNCH CHRISTMAS ISLAND")
                 }
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .foregroundStyle(Color(red: 0.08, green: 0.20, blue: 0.16))
-                .background(cream, in: RoundedRectangle(cornerRadius: 17))
+                .padding(.vertical, 19)
+                .foregroundStyle(NoelPalette.background)
+                .background(NoelPalette.mint, in: RoundedRectangle(cornerRadius: 18))
             }
             .disabled(busy)
 
@@ -186,33 +261,61 @@ struct ContentView: View {
                 Button("Stop Live Activity") {
                     Task { await stopChristmas() }
                 }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.75))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(NoelPalette.muted)
                 .disabled(busy)
             }
             Text(status)
                 .font(.system(size: 12))
+                .foregroundStyle(NoelPalette.cream.opacity(0.8))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.7))
         }
     }
 
-    private var footnote: some View {
+    private var footer: some View {
         VStack(spacing: 7) {
-            Text("✦  MADE FOR THE IPHONE 15  ✦")
+            Text("❄️  NOEL ISLAND / VERSION 2.0  ❄️")
                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(1.8)
-            Text("Apple limits each Live Activity to about 8 hours. Reopen the app to start a new one. Snow animations appear inside the app, not around the system Island.")
+                .tracking(1.5)
+            Text("Falling snow animates inside this app. The Dynamic Island uses Apple's system-supported Live Activity scenes and short update transitions. Live Activities may end after about eight hours.")
                 .font(.system(size: 11))
                 .multilineTextAlignment(.center)
         }
-        .foregroundStyle(.white.opacity(0.43))
+        .foregroundStyle(NoelPalette.muted)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func sectionTitle(_ title: String, caption: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(caption)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(NoelPalette.mint)
+            Text(title)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .tracking(1.5)
+                .foregroundStyle(.white)
+        }
     }
 
     @MainActor
     private func refreshState() async {
         running = !Activity<ChristmasAttributes>.activities.isEmpty
-        if running { status = "Christmas is running in your Dynamic Island!" }
+        status = running ? "Magic is live in your Dynamic Island." : "Ready for the North Pole to launch."
+    }
+
+    @MainActor
+    private func syncActivity() async {
+        guard !Activity<ChristmasAttributes>.activities.isEmpty else {
+            status = "Scene selected. Launch the Island to show it!"
+            return
+        }
+        let state = ChristmasAttributes.ContentState(
+            theme: theme, mood: mood, scene: scene,
+            startedAt: Date(), eventUntil: Date().addingTimeInterval(180))
+        for activity in Activity<ChristmasAttributes>.activities {
+            await activity.update(ActivityContent(state: state, staleDate: nil))
+        }
+        status = "\(scene.title) sent to your Island ✨"
     }
 
     @MainActor
@@ -220,22 +323,24 @@ struct ContentView: View {
         busy = true
         defer { busy = false }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            status = "Live Activities are off. Enable them in Settings → Apps → Noel Island → Live Activities."
+            status = "Enable Live Activities in iPhone Settings → Apps → Noel Island."
             return
         }
         for activity in Activity<ChristmasAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
         let attributes = ChristmasAttributes(christmasDate: ChristmasTime.nextChristmas())
-        let state = ChristmasAttributes.ContentState(theme: theme, startedAt: Date())
+        let state = ChristmasAttributes.ContentState(
+            theme: theme, mood: mood, scene: scene,
+            startedAt: Date(), eventUntil: Date().addingTimeInterval(180))
         do {
             _ = try Activity.request(attributes: attributes,
                 content: ActivityContent(state: state, staleDate: nil), pushType: nil)
             running = true
-            status = "Live! Go to your Home Screen and long-press the Island 🎄"
+            status = "It's LIVE! Long-press the Island for the magic."
         } catch {
             running = false
-            status = "Couldn't start the Live Activity: \(error.localizedDescription)"
+            status = "Could not launch: \(error.localizedDescription)"
         }
     }
 
@@ -247,43 +352,144 @@ struct ContentView: View {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
         running = false
-        status = "Christmas Island stopped. You can restart it any time."
+        status = "Christmas Island stopped. Start it whenever you like."
     }
 }
 
-private struct SnowfallView: View {
-    struct Flake {
-        var x: CGFloat
-        var y: CGFloat
-        var radius: CGFloat
-        var speed: CGFloat
+// Big visual scene: the moon and landscape change instantly when an event is picked.
+private struct HolidayHeroView: View {
+    let theme: ChristmasTheme
+    let scene: NorthPoleScene
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                LinearGradient(colors: sceneColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                Circle()
+                    .fill(.white.opacity(0.8))
+                    .frame(width: 70, height: 70)
+                    .blur(radius: 1)
+                    .offset(x: 100, y: -48)
+                Circle()
+                    .fill(.white.opacity(0.22))
+                    .frame(width: 115, height: 115)
+                    .blur(radius: 22)
+                    .offset(x: 100, y: -48)
+
+                VStack(alignment: .leading, spacing: 11) {
+                    HStack {
+                        Label("NORTH POLE / LIVE", systemImage: "sparkle")
+                        Spacer()
+                        Text("✦  02:00 AM")
+                    }
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .tracking(1.3)
+                    .foregroundStyle(NoelPalette.cream.opacity(0.85))
+                    Spacer()
+                    Text(scene.icon)
+                        .font(.system(size: 39))
+                    Text(scene.title)
+                        .font(.system(size: 23, weight: .heavy, design: .rounded))
+                    Text(scene.caption)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.82))
+                }
+                .foregroundStyle(.white)
+                .padding(23)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 240)
+            .clipped()
+
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                let christmas = ChristmasTime.nextChristmas(from: timeline.date)
+                let days = ChristmasTime.days(until: christmas, from: timeline.date)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 7) {
+                        Text("\(days)")
+                            .font(.system(size: 51, weight: .black, design: .rounded))
+                        Text("DAYS TO CHRISTMAS")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundStyle(NoelPalette.cream)
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.17))
+                            Capsule()
+                                .fill(LinearGradient(colors: [NoelPalette.mint, NoelPalette.gold],
+                                    startPoint: .leading, endPoint: .trailing))
+                                .frame(width: geometry.size.width * ChristmasTime.progress(to: christmas, from: timeline.date))
+                        }
+                    }
+                    .frame(height: 6)
+                    HStack {
+                        Text("THE COUNTDOWN IS ON")
+                        Spacer()
+                        Text(theme.emoji + "  " + theme.title)
+                    }
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundStyle(NoelPalette.muted)
+                }
+                .padding(20)
+            }
+            .background(NoelPalette.night)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).stroke(.white.opacity(0.12)))
     }
 
-    private let flakes: [Flake] = SnowfallView.makeFlakes()
+    private var sceneColors: [Color] {
+        switch scene {
+        case .winterNight: return [Color(red: 0.07, green: 0.18, blue: 0.34), Color(red: 0.12, green: 0.36, blue: 0.37)]
+        case .sleighFlyby: return [Color(red: 0.43, green: 0.11, blue: 0.23), Color(red: 0.12, green: 0.21, blue: 0.35)]
+        case .giftShower: return [Color(red: 0.43, green: 0.26, blue: 0.12), Color(red: 0.17, green: 0.32, blue: 0.27)]
+        case .snowstorm: return [Color(red: 0.16, green: 0.41, blue: 0.53), Color(red: 0.10, green: 0.19, blue: 0.35)]
+        case .northernLights: return [Color(red: 0.06, green: 0.39, blue: 0.29), Color(red: 0.20, green: 0.13, blue: 0.45)]
+        case .starWish: return [Color(red: 0.28, green: 0.16, blue: 0.47), Color(red: 0.13, green: 0.23, blue: 0.41)]
+        }
+    }
+}
+
+private struct AnimatedSnowView: View {
+    let mood: ChristmasMood
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private struct Flake {
+        let x: CGFloat
+        let y: CGFloat
+        let size: CGFloat
+        let speed: Double
+        let drift: Double
+    }
+    private static let flakes: [Flake] = makeFlakes()
 
     private static func makeFlakes() -> [Flake] {
         var result: [Flake] = []
-        result.reserveCapacity(40)
-        for i in 0..<40 {
-            let x: CGFloat = CGFloat((i * 173 + 73) % 997) / CGFloat(997)
-            let y: CGFloat = CGFloat((i * 271 + 127) % 991) / CGFloat(991)
-            let radius: CGFloat = CGFloat((i % 3) + 1)
-            let speed: CGFloat = CGFloat((i % 4) + 1) * CGFloat(0.012)
-            result.append(Flake(x: x, y: y, radius: radius, speed: speed))
+        result.reserveCapacity(135)
+        for index in 0..<135 {
+            let x = CGFloat((index * 137 + 47) % 997) / CGFloat(997)
+            let y = CGFloat((index * 263 + 109) % 991) / CGFloat(991)
+            let size = CGFloat((index % 4) + 1)
+            let speed = Double((index % 5) + 2) * 0.012
+            let drift = Double((index % 7) + 3)
+            result.append(Flake(x: x, y: y, size: size, speed: speed, drift: drift))
         }
         return result
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: false)) { context in
-            Canvas { canvas, size in
-                let time = context.date.timeIntervalSinceReferenceDate
-                for f in flakes {
-                    let x = f.x * size.width + CGFloat(sin(time * 0.6 + Double(f.y) * 20) * 10)
-                    let progress = (f.y + CGFloat(time) * f.speed).truncatingRemainder(dividingBy: 1)
-                    let y = progress * size.height
-                    let rect = CGRect(x: x, y: y, width: f.radius * 2, height: f.radius * 2)
-                    canvas.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.5)))
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { context in
+            Canvas { canvas, bounds in
+                let time = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate
+                for flake in Self.flakes.prefix(mood.flakeCount) {
+                    let sideways = sin(time * 0.6 + Double(flake.y) * 18.0) * flake.drift
+                    let x = flake.x * bounds.width + CGFloat(sideways)
+                    let progress = (Double(flake.y) + time * flake.speed)
+                        .truncatingRemainder(dividingBy: 1.0)
+                    let y = CGFloat(progress) * bounds.height
+                    let rect = CGRect(x: x, y: y, width: flake.size, height: flake.size)
+                    canvas.fill(Path(ellipseIn: rect), with: .color(.white.opacity(mood == .blizzard ? 0.82 : 0.52)))
                 }
             }
         }
