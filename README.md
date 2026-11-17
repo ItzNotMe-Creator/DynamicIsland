@@ -3,13 +3,23 @@
 A native SwiftUI iPhone app + WidgetKit Live Activity for Dynamic Island.
 
 ## What is included
-- Four themes: Santa, Rudolph, Snowman, Gingerbread
-- Compact Island displays a character, days remaining, snowflake
+- Six characters: Santa, Rudolph, Snowman, Gingerbread, Aurora, Penguin
+- Compact Island displays the selected character or snowy event, days remaining, snowflake
 - Long-press Island to reveal festive expanded card
 - Lock Screen Live Activity with Christmas countdown
-- Festive app with falling snow animation and Christmas countdown
+- Premium festive app with three falling snow modes, animated countdown and six scene controls
 - Start / restart / stop controls
 - No server, account, personal data collection, or paid subscription in the app
+
+## Noel Island 2.0
+- Six characters: Santa, Rudolph, Snowman, Gingerbread, Northern Lights and Penguin.
+- Six selectable North Pole scenes with a matching mini landscape in the expanded Island and Lock Screen Live Activity.
+- Compact Island shows character or special snowstorm icon and days remaining.
+- Three modes for the **animated snowfall inside the app**: Cozy, Magic and Blizzard.
+- Interactive scene controls: select a theme, trigger a scene, or use Surprise Me. Scene changes update the active Live Activity when iOS permits.
+- Premium dark winter dashboard with countdown, gradient scene artwork and Christmas progress bar.
+- Winter Nightstand: a dim ambient clock and Christmas countdown with snowfall. **Only works while the Noel Island app is open and foregrounded**, and it may use more battery. A normal iPhone 15 cannot run the system Always-On Display, and the app cannot override the lock screen.
+- iOS does not allow unrestricted, permanent falling-snow animation inside a Live Activity. The Island contains static snow artwork and changes scene when you update it from the app.
 
 ## IMPORTANT limitations
 - This ZIP contains **source code**, not a ready-to-install IPA. A compiler must build it.
