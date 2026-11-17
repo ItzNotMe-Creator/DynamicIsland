@@ -17,7 +17,7 @@ struct ContentView: View {
     @State private var running = false
     @State private var busy = false
     @State private var status = "Your North Pole is ready."
-    @State private var surpriseCount = 0
+    @State private var showNightstand = false
 
     private var theme: ChristmasTheme { ChristmasTheme(rawValue: themeRaw) ?? .santa }
     private var mood: ChristmasMood { ChristmasMood(rawValue: moodRaw) ?? .magic }
@@ -40,6 +40,7 @@ struct ContentView: View {
                     moodPicker
                     scenePicker
                     startControls
+                    nightstandControls
                     footer
                 }
                 .padding(.horizontal, 20)
@@ -49,6 +50,9 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
         .task { await refreshState() }
+        .fullScreenCover(isPresented: $showNightstand) {
+            NoelNightstandView(theme: theme, mood: mood, scene: scene)
+        }
     }
 
     private var header: some View {
@@ -214,10 +218,10 @@ struct ContentView: View {
             }
 
             Button {
-                surpriseCount += 1
-                let events = NorthPoleScene.allCases
-                scene = events[surpriseCount % events.count]
-                Task { await syncActivity() }
+                if let randomScene = NorthPoleScene.allCases.filter({ $0 != scene }).randomElement() {
+                    scene = randomScene
+                    Task { await syncActivity() }
+                }
             } label: {
                 HStack {
                     Image(systemName: "wand.and.stars")
@@ -270,6 +274,32 @@ struct ContentView: View {
                 .foregroundStyle(NoelPalette.cream.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
+    }
+
+    private var nightstandControls: some View {
+        Button {
+            showNightstand = true
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(NoelPalette.gold)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("WINTER NIGHTSTAND")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(NoelPalette.cream)
+                    Text("Ambient clock + falling snow while this app stays open")
+                        .font(.system(size: 11))
+                        .foregroundStyle(NoelPalette.muted)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .foregroundStyle(NoelPalette.cream)
+            }
+            .padding(17)
+            .background(.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 18))
+        }
+        .buttonStyle(.plain)
     }
 
     private var footer: some View {
@@ -492,6 +522,94 @@ private struct AnimatedSnowView: View {
                     canvas.fill(Path(ellipseIn: rect), with: .color(.white.opacity(mood == .blizzard ? 0.82 : 0.52)))
                 }
             }
+        }
+    }
+}
+
+// A foreground-only nightstand-style display for standard iPhone 15 models.
+// This does NOT unlock the system Always-On Display or run on the Lock Screen.
+private struct NoelNightstandView: View {
+    let theme: ChristmasTheme
+    let mood: ChristmasMood
+    let scene: NorthPoleScene
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.005, green: 0.014, blue: 0.035)
+                .ignoresSafeArea()
+
+            AnimatedSnowView(mood: mood)
+                .opacity(0.45)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            VStack(spacing: 20) {
+                HStack {
+                    Text("NOEL  /  NIGHTSTAND")
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .tracking(2.2)
+                        .foregroundStyle(Color(red: 0.55, green: 0.79, blue: 0.71))
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                    .accessibilityLabel("Close nightstand")
+                }
+                .padding(.top, 20)
+
+                Spacer()
+
+                Text(theme.emoji)
+                    .font(.system(size: 55))
+                TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                    VStack(spacing: 7) {
+                        Text(timeline.date, format: .dateTime.hour().minute())
+                            .font(.system(size: 85, weight: .ultraLight, design: .rounded))
+                            .monospacedDigit()
+                            .minimumScaleFactor(0.7)
+                        Text(timeline.date, format: .dateTime.weekday(.wide).month(.wide).day())
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .foregroundStyle(Color(red: 0.87, green: 0.96, blue: 0.92))
+                }
+
+                TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                    let days = ChristmasTime.days(until: ChristmasTime.nextChristmas(from: timeline.date), from: timeline.date)
+                    Text("\(days) DAYS TO CHRISTMAS  ❄️")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .tracking(1.7)
+                        .foregroundStyle(Color(red: 0.58, green: 0.88, blue: 0.76))
+                }
+                Text(scene.caption)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+
+                Spacer()
+                Text("Display stays awake only while Noel Island is open.\nLock your iPhone normally to turn the screen off.")
+                    .font(.system(size: 10))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.36))
+                    .padding(.bottom, 14)
+            }
+            .padding(.horizontal, 28)
+        }
+        .persistentSystemOverlays(.hidden)
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+        .onChange(of: scenePhase) { _, phase in
+            UIApplication.shared.isIdleTimerDisabled = (phase == .active)
         }
     }
 }
